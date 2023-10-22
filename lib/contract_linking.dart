@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -9,7 +10,7 @@ import 'package:web_socket_channel/io.dart';
 class ContractLinking extends ChangeNotifier {
   final String _rpcUrl = 'http://127.0.0.1:7545';
   final String _wsUrl = 'ws://127.0.0.1:7545';
-  final String _privateKey = '0x31c2c34e07010069e01ced3399304634d3d2befe6d97558e888b4c34f5d6482e';
+  final String _privateKey = '0x8a0d2f62ed0b9a3b4330b1f15cb2c1f022584f8d90bae2d99db82e7674a8fc53';
 
   Web3Client? _web3client;
   bool isLoading = false;
@@ -41,7 +42,7 @@ class ContractLinking extends ChangeNotifier {
   Future<void> getAbi() async {
     String abiStringFile = await rootBundle.loadString('build/contracts/HelloWorld.json');
     final jsonAbi = jsonDecode(abiStringFile);
-    _abiCode = jsonAbi['abi'];
+    _abiCode = jsonEncode(jsonAbi['abi']);
     _contractAddress = EthereumAddress.fromHex(jsonAbi['networks']['5777']['address']);
   }
 
@@ -73,14 +74,21 @@ class ContractLinking extends ChangeNotifier {
   setMessage(String message) async {
     isLoading = true;
     notifyListeners();
-    await _web3client!.sendTransaction(
-      _credentials!,
-      Transaction.callContract(
-        contract: _contract!,
-        function: _setMessage!,
-        parameters: [message],
-      ),
-    );
-    getMessage();
+    try {
+      await _web3client!.sendTransaction(
+        _credentials!,
+        Transaction.callContract(
+          contract: _contract!,
+          function: _setMessage!,
+          parameters: [message],
+        ),
+        chainId: 1337,
+      );
+      getMessage();
+    } catch (e) {
+      log(e.toString());
+      isLoading = false;
+      notifyListeners();
+    }
   }
 }
